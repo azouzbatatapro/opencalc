@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenCalc — a beautiful open-source calculator</title>
+  <meta name="description" content="OpenCalc is a free, open-source web calculator with basic and scientific modes, dark &amp; light themes, calculation history and silky animations. Zero dependencies." />
+  <meta property="og:title" content="OpenCalc" />
+  <meta property="og:description" content="A beautiful, animated, zero-dependency calculator for the web." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2322d3ee'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Crect x='14' y='12' width='36' height='14' rx='4' fill='%23ffffff' opacity='0.9'/%3E%3Ccircle cx='20' cy='38' r='3.5' fill='%23ffffff'/%3E%3Ccircle cx='32' cy='38' r='3.5' fill='%23ffffff'/%3E%3Ccircle cx='44' cy='38' r='3.5' fill='%23ffffff'/%3E%3Ccircle cx='20' cy='49' r='3.5' fill='%23ffffff'/%3E%3Ccircle cx='32' cy='49' r='3.5' fill='%23ffffff'/%3E%3Crect x='40' y='45.5' width='8' height='7' rx='2' fill='%23ffffff'/%3E%3C/svg%3E" />
+  <script>
+    /* Apply the saved theme before first paint to avoid a flash of the wrong theme */
+    (function () {
+      try {
+        var t = localStorage.getItem('opencalc.theme');
+        if (t !== 'light' && t !== 'dark') {
+          t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { /* private mode etc. — keep the default dark theme */ }
+    })();
+  </script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Floating background orbs (purely decorative, animated in CSS) -->
+  <div class="orbs" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <main class="app" id="app" data-hist="off">
+    <section class="calculator" data-sci="off" aria-label="Calculator">
+      <header class="calc-top">
+        <div class="mode-switch" id="mode-switch" data-mode="basic" role="group" aria-label="Calculator mode">
+          <span class="mode-thumb" aria-hidden="true"></span>
+          <button type="button" class="mode-btn" data-act="mode" data-value="basic" aria-pressed="true">Basic</button>
+          <button type="button" class="mode-btn" data-act="mode" data-value="sci" aria-pressed="false">Scientific</button>
+        </div>
+        <div class="top-actions">
+          <button type="button" class="icon-btn angle-btn" id="btn-angle" data-act="angle" title="Toggle angle unit (DEG/RAD)" aria-label="Angle unit: degrees">DEG</button>
+          <button type="button" class="icon-btn" data-act="history" title="History" aria-label="Toggle history panel" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
+            </svg>
+            <span class="badge" id="hist-count" hidden>0</span>
+          </button>
+          <button type="button" class="icon-btn" data-act="theme" title="Toggle theme" aria-label="Toggle dark or light theme">
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+            </svg>
+            <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <section class="display" aria-label="Display">
+        <div class="display-head">
+          <output class="expr" id="expr" for="result">0</output>
+          <button type="button" class="icon-btn small" data-act="back" title="Backspace" aria-label="Backspace">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 5H9l-7 7 7 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z" />
+              <path d="m15 9-6 6" /><path d="m9 9 6 6" />
+            </svg>
+          </button>
+        </div>
+        <output class="result" id="result" aria-live="polite">0</output>
+      </section>
+
+      <div class="keys-wrap">
+        <!-- Scientific keys: slide in when "Scientific" mode is active -->
+        <div class="sci-keys" aria-label="Scientific functions">
+          <button type="button" class="key sci" style="--i:0" data-ins="sin(">sin</button>
+          <button type="button" class="key sci" style="--i:1" data-ins="cos(">cos</button>
+          <button type="button" class="key sci" style="--i:2" data-ins="tan(">tan</button>
+          <button type="button" class="key sci" style="--i:3" data-ins="log(">log</button>
+          <button type="button" class="key sci" style="--i:4" data-ins="ln(">ln</button>
+          <button type="button" class="key sci" style="--i:5" data-ins="√(">√</button>
+          <button type="button" class="key sci" style="--i:6" data-ins="²">x²</button>
+          <button type="button" class="key sci" style="--i:7" data-ins="^">x&#8319;</button>
+          <button type="button" class="key sci" style="--i:8" data-ins="π">π</button>
+          <button type="button" class="key sci" style="--i:9" data-ins="e">e</button>
+        </div>
+
+        <!-- Basic keypad -->
+        <div class="main-keys" aria-label="Keypad">
+          <button type="button" class="key fn" style="--i:0" data-act="clear">AC</button>
+          <button type="button" class="key fn" style="--i:1" data-act="paren">( )</button>
+          <button type="button" class="key fn" style="--i:2" data-ins="%">%</button>
+          <button type="button" class="key op" style="--i:3" data-ins="÷">÷</button>
+
+          <button type="button" class="key" style="--i:4" data-ins="7">7</button>
+          <button type="button" class="key" style="--i:5" data-ins="8">8</button>
+          <button type="button" class="key" style="--i:6" data-ins="9">9</button>
+          <button type="button" class="key op" style="--i:7" data-ins="×">×</button>
+
+          <button type="button" class="key" style="--i:8" data-ins="4">4</button>
+          <button type="button" class="key" style="--i:9" data-ins="5">5</button>
+          <button type="button" class="key" style="--i:10" data-ins="6">6</button>
+          <button type="button" class="key op" style="--i:11" data-ins="−">−</button>
+
+          <button type="button" class="key" style="--i:12" data-ins="1">1</button>
+          <button type="button" class="key" style="--i:13" data-ins="2">2</button>
+          <button type="button" class="key" style="--i:14" data-ins="3">3</button>
+          <button type="button" class="key op" style="--i:15" data-ins="+">+</button>
+
+          <button type="button" class="key fn" style="--i:16" data-act="sign">±</button>
+          <button type="button" class="key" style="--i:17" data-ins="0">0</button>
+          <button type="button" class="key" style="--i:18" data-ins=".">.</button>
+          <button type="button" class="key eq" style="--i:19" data-act="equals">=</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="history" id="history" aria-label="Calculation history">
+      <header class="history-head">
+        <h2>History</h2>
+        <button type="button" class="icon-btn small" id="btn-clear-history" data-act="clear-history" title="Clear history" aria-label="Clear history">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+        </button>
+      </header>
+      <ul class="history-list" id="history-list"></ul>
+      <p class="history-empty" id="history-empty">No calculations yet.<br />Your results will appear here.</p>
+    </aside>
+  </main>
+
+  <footer class="app-footer">
+    <strong>OpenCalc</strong> · free &amp; open source · made with vanilla HTML, CSS &amp; JavaScript
+  </footer>
+
+  <noscript><p class="noscript-note">OpenCalc needs JavaScript to run. Please enable it and reload.</p></noscript>
+
+  <script src="js/parser.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
